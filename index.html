@@ -504,6 +504,81 @@
     50% { opacity: .3; }
   }
 
+  /* LOADING MÚSICA */
+  .loading-panel {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .loading-music-icon {
+    font-size: 52px;
+    margin-bottom: 16px;
+    display: block;
+    animation: bounce 1s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .loading-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .loading-sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .loading-bar-wrap {
+    background: #f0e6ea;
+    border-radius: 100px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .loading-bar-fill {
+    height: 100%;
+    background: var(--rose);
+    border-radius: 100px;
+    width: 0%;
+    transition: width .5s ease;
+  }
+  .loading-status {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+  .loading-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+    text-align: left;
+  }
+  .loading-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    transition: color .3s;
+  }
+  .loading-step.done { color: #22c55e; }
+  .loading-step.active { color: var(--text); font-weight: 500; }
+  .loading-step-icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #f0e6ea;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+    transition: background .3s;
+  }
+  .loading-step.done .loading-step-icon { background: #dcfce7; }
+  .loading-step.active .loading-step-icon { background: var(--rose-light); }
+
   /* BLOQUEIO DE PRÉVIA */
   .preview-blocked {
     display: none;
@@ -1262,14 +1337,34 @@
     <p class="error-msg" id="err5">Escolha o tom da música.</p>
     <div class="nav-btns">
       <button class="btn-back" onclick="goToStep(4)">←</button>
-      <button class="btn-next" id="next5">Gerar prévia 🎵</button>
+      <button class="btn-next" id="next5">Gerar minha música 🎵</button>
     </div>
     </div><!-- /step5Content -->
   </div>
 
-  <!-- ETAPA 6: Prévia + Pagamento -->
+  <!-- ETAPA 6: Gerando + Prévia + Pagamento -->
   <div class="step-panel" id="step6">
-    <p class="question-label" style="text-align:center">Sua prévia está pronta! 🎶</p>
+
+    <!-- LOADING -->
+    <div id="loadingMusica" class="loading-panel">
+      <span class="loading-music-icon">🎵</span>
+      <h2 class="loading-title">Sua música está sendo preparada</h2>
+      <p class="loading-sub">Nossa IA está criando uma música única<br>especialmente para <strong id="loadingNome">você</strong></p>
+      <div class="loading-bar-wrap">
+        <div class="loading-bar-fill" id="loadingBar"></div>
+      </div>
+      <p class="loading-status" id="loadingStatus">Iniciando geração...</p>
+      <div class="loading-steps">
+        <div class="loading-step active" id="lstep1"><div class="loading-step-icon" id="licon1">1</div> Analisando seu briefing</div>
+        <div class="loading-step" id="lstep2"><div class="loading-step-icon" id="licon2">2</div> Compondo a melodia</div>
+        <div class="loading-step" id="lstep3"><div class="loading-step-icon" id="licon3">3</div> Gerando a letra personalizada</div>
+        <div class="loading-step" id="lstep4"><div class="loading-step-icon" id="licon4">4</div> Finalizando sua música</div>
+      </div>
+    </div>
+
+    <!-- PRÉVIA (aparece quando pronta) -->
+    <div id="previaMusica" style="display:none">
+    <p class="question-label" style="text-align:center">Sua música está pronta! 🎶</p>
 
     <div class="preview-card">
       <p>Trecho exclusivo criado para <strong id="nomePreview" style="color:#e8a0b4">você</strong></p>
@@ -1439,6 +1534,9 @@
     </div>
   </div>
 
+    </div><!-- /previaMusica -->
+  </div><!-- /step6 extra close -->
+
   <!-- ETAPA 7: Sucesso -->
   <div class="step-panel" id="step7">
     <div class="download-panel">
@@ -1574,13 +1672,21 @@
     goToStep(5);
   });
 
-  // Override next5 to show preview
-  document.getElementById('next5').addEventListener('click', () => {
+  // Override next5 — chama KIE.ai e mostra loading
+  document.getElementById('next5').addEventListener('click', async () => {
     if (!data.tom) { document.getElementById('err5').style.display = 'block'; return; }
-    document.getElementById('nomePreview').textContent = data.nome || 'você';
+
     sessionStorage.setItem('previaGerada', '1');
+    document.getElementById('loadingNome').textContent = data.nome || 'você';
+    document.getElementById('nomePreview').textContent = data.nome || 'você';
     goToStep(6);
-  }, true); // use capture to run after bindChips
+
+    // Mostra loading, esconde prévia
+    document.getElementById('loadingMusica').style.display = 'block';
+    document.getElementById('previaMusica').style.display = 'none';
+
+    await gerarMusica();
+  }, true);
 
   // Verificar bloqueio ao chegar no step5
   const _origGoToStep = goToStep;
@@ -1836,8 +1942,213 @@
     } catch { return false; }
   }
 
+  // ── GERAÇÃO DE MÚSICA ──
+  let taskId = null;
+  let audioUrlCompleto = null;
+  let statusInterval = null;
+  let loadingProgress = 0;
+
+  async function gerarMusica() {
+    try {
+      // Anima barra de loading
+      loadingProgress = 5;
+      atualizarLoading(loadingProgress, 'Enviando briefing para a IA...');
+      ativarStep(1);
+
+      const res = await fetch('/api/gerar-musica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          genero: data.genero,
+          ocasiao: data.ocasiao,
+          nome: data.nome,
+          relacionamento: data.relacionamento,
+          briefing: data.briefing,
+          tom: data.tom
+        })
+      });
+
+      const json = await res.json();
+
+      if (!json.taskId) {
+        mostrarErroLoading('Erro ao iniciar geração. Tente novamente.');
+        return;
+      }
+
+      taskId = json.taskId;
+      loadingProgress = 25;
+      atualizarLoading(loadingProgress, 'Música em composição...');
+      ativarStep(2);
+
+      // Verifica status a cada 5 segundos
+      statusInterval = setInterval(verificarStatus, 5000);
+
+    } catch (e) {
+      console.error(e);
+      mostrarErroLoading('Erro de conexão. Tente novamente.');
+    }
+  }
+
+  async function verificarStatus() {
+    if (!taskId) return;
+
+    try {
+      const res = await fetch('/api/status-musica?taskId=' + taskId);
+      const json = await res.json();
+
+      // Avança a barra progressivamente
+      if (loadingProgress < 85) {
+        loadingProgress += 8;
+        atualizarLoading(loadingProgress, statusTexto(json.status));
+      }
+
+      if (loadingProgress > 30) ativarStep(3);
+      if (loadingProgress > 60) ativarStep(4);
+
+      if (json.pronta && json.audioUrl) {
+        clearInterval(statusInterval);
+        audioUrlCompleto = json.audioUrl;
+        atualizarLoading(100, 'Música pronta!');
+        concluirSteps();
+
+        setTimeout(() => {
+          mostrarPrevia(json.audioUrl);
+        }, 800);
+      }
+
+      if (json.status === 'failed') {
+        clearInterval(statusInterval);
+        mostrarErroLoading('Falha na geração. Tente novamente.');
+      }
+
+    } catch (e) {
+      console.error('Erro ao verificar status:', e);
+    }
+  }
+
+  function statusTexto(status) {
+    const map = {
+      pending: 'Aguardando na fila...',
+      processing: 'Compondo sua música...',
+      completed: 'Finalizando...'
+    };
+    return map[status] || 'Gerando sua música...';
+  }
+
+  function atualizarLoading(pct, texto) {
+    const bar = document.getElementById('loadingBar');
+    const status = document.getElementById('loadingStatus');
+    if (bar) bar.style.width = pct + '%';
+    if (status) status.textContent = texto;
+  }
+
+  function ativarStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('lstep' + i);
+      const ic = document.getElementById('licon' + i);
+      if (!el) continue;
+      if (i < n) { el.className = 'loading-step done'; ic.textContent = '✓'; }
+      else if (i === n) { el.className = 'loading-step active'; ic.textContent = i; }
+      else { el.className = 'loading-step'; ic.textContent = i; }
+    }
+  }
+
+  function concluirSteps() {
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('lstep' + i);
+      const ic = document.getElementById('licon' + i);
+      if (el) el.className = 'loading-step done';
+      if (ic) ic.textContent = '✓';
+    }
+  }
+
+  function mostrarPrevia(audioUrl) {
+    document.getElementById('loadingMusica').style.display = 'none';
+    document.getElementById('previaMusica').style.display = 'block';
+
+    // Conecta o player real ao áudio
+    let audio = document.getElementById('audioReal');
+    if (!audio) {
+      audio = document.createElement('audio');
+      audio.id = 'audioReal';
+      audio.src = audioUrl;
+      // Limita a 45 segundos
+      audio.addEventListener('timeupdate', () => {
+        if (audio.currentTime >= 45) {
+          audio.pause();
+          audio.currentTime = 0;
+          playing = false;
+          document.getElementById('playIcon').innerHTML = '<path d="M8 5v14l11-7z"/>';
+          document.querySelectorAll('#audioWave .wave-bar').forEach(b => b.style.animationPlayState = 'paused');
+        }
+      });
+      document.body.appendChild(audio);
+    }
+
+    // Override do togglePlay para usar áudio real
+    window.togglePlay = function() {
+      playing = !playing;
+      const icon = document.getElementById('playIcon');
+      const bars = document.querySelectorAll('#audioWave .wave-bar');
+      if (playing) {
+        audio.play();
+        icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+        bars.forEach(b => b.style.animationPlayState = 'running');
+      } else {
+        audio.pause();
+        icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+        bars.forEach(b => b.style.animationPlayState = 'paused');
+      }
+    };
+  }
+
+  function mostrarErroLoading(msg) {
+    const status = document.getElementById('loadingStatus');
+    if (status) { status.textContent = msg; status.style.color = '#c0395a'; }
+    const icon = document.querySelector('.loading-music-icon');
+    if (icon) icon.textContent = '😕';
+  }
+
+  // Na tela de download, conecta o player ao áudio completo (após pagamento)
+  const _origGoToStep7 = window.goToStep;
+  window.goToStep = function(n) {
+    if (n === 7 && audioUrlCompleto) {
+      // Player da tela de download usa o áudio completo sem limite
+      setTimeout(() => {
+        const dlAudio = document.createElement('audio');
+        dlAudio.id = 'audioDownload';
+        dlAudio.src = audioUrlCompleto;
+        document.body.appendChild(dlAudio);
+
+        window.togglePlayerMain = function() {
+          playerPlaying = !playerPlaying;
+          const icon = document.getElementById('playerBtnIcon');
+          if (playerPlaying) {
+            dlAudio.play();
+            icon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+          } else {
+            dlAudio.pause();
+            icon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+          }
+        };
+
+        // Botão de download aponta pro arquivo real
+        document.querySelector('.btn-download').onclick = () => {
+          const a = document.createElement('a');
+          a.href = audioUrlCompleto;
+          a.download = 'musica-' + (data.nome || 'personalizada').toLowerCase().replace(/\s+/g,'-') + '.mp3';
+          a.click();
+        };
+      }, 300);
+    }
+    _origGoToStep7(n);
+  };
+
   function resetFunil() {
     sessionStorage.removeItem('previaGerada');
+    taskId = null; audioUrlCompleto = null;
+    clearInterval(statusInterval);
+    loadingProgress = 0;
     Object.keys(editUsed).forEach(k => { editUsed[k] = false; });
     ['btnRitmo','btnEstilo','btnNome','btnDetalhe'].forEach(id => {
       const b = document.getElementById(id);
