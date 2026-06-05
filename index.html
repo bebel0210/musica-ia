@@ -1342,6 +1342,20 @@
     </div><!-- /step5Content -->
   </div>
 
+  <!-- ETAPA 5.5: Voz -->
+  <div class="step-panel" id="step5b">
+    <p class="question-label">Qual o tipo de voz? <small>Escolha um</small></p>
+    <div class="options-grid" id="vozOptions">
+      <button class="opt-btn" data-val="male voice">🎤 Voz masculina</button>
+      <button class="opt-btn" data-val="female voice">🎤 Voz feminina</button>
+    </div>
+    <p class="error-msg" id="err5b">Selecione o tipo de voz para continuar.</p>
+    <div class="nav-btns">
+      <button class="btn-back" onclick="goToStep(5)">←</button>
+      <button class="btn-next" id="next5b">Gerar minha música 🎵</button>
+    </div>
+  </div>
+
   <!-- ETAPA 6: Gerando + Prévia + Pagamento -->
   <div class="step-panel" id="step6">
 
@@ -1610,7 +1624,7 @@
 
 <script>
   let currentStep = 1;
-  const totalSteps = 6;
+  const totalSteps = 7;
   const data = {};
 
   function updateProgress(step) {
@@ -1622,7 +1636,8 @@
     document.getElementById('step' + currentStep).classList.remove('active');
     currentStep = n;
     document.getElementById('step' + currentStep).classList.add('active');
-    updateProgress(Math.min(n, totalSteps));
+    const progressNum = n === '5b' ? 6 : Math.min(n, totalSteps);
+    updateProgress(progressNum);
     window.scrollTo({ top: document.querySelector('.quiz-wrap').offsetTop - 20, behavior: 'smooth' });
   }
 
@@ -1666,27 +1681,41 @@
     goToStep(5);
   });
 
-  // Override next5 — chama KIE.ai e mostra loading
-  document.getElementById('next5').addEventListener('click', async () => {
+  // Override next5 — vai para escolha de voz
+  document.getElementById('next5').addEventListener('click', () => {
     if (!data.tom) { document.getElementById('err5').style.display = 'block'; return; }
+    goToStep('5b');
+  }, true);
+
+  // Bind chips de voz
+  const vozGrid = document.getElementById('vozOptions');
+  vozGrid.querySelectorAll('.opt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      vozGrid.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      data.voz = btn.dataset.val;
+      document.getElementById('err5b').style.display = 'none';
+    });
+  });
+
+  document.getElementById('next5b').addEventListener('click', async () => {
+    if (!data.voz) { document.getElementById('err5b').style.display = 'block'; return; }
 
     sessionStorage.setItem('previaGerada', '1');
     document.getElementById('loadingNome').textContent = data.nome || 'você';
     document.getElementById('nomePreview').textContent = data.nome || 'você';
     goToStep(6);
 
-    // Mostra loading, esconde prévia
     document.getElementById('loadingMusica').style.display = 'block';
     document.getElementById('previaMusica').style.display = 'none';
 
     await gerarMusica();
-  }, true);
+  });
 
   // Verificar bloqueio ao chegar no step5
   const _origGoToStep = goToStep;
   goToStep = function(n) {
     if (n === 5 && sessionStorage.getItem('previaGerada') === '1') {
-      // mostrar aviso, esconder conteúdo
       document.getElementById('previewBlocked').style.display = 'block';
       document.getElementById('step5Content').style.display = 'none';
     } else if (n === 5) {
@@ -1952,7 +1981,8 @@
           nome: data.nome,
           relacionamento: data.relacionamento,
           briefing: data.briefing,
-          tom: data.tom
+          tom: data.tom,
+          voz: data.voz || 'male voice'
         })
       });
 
@@ -2144,6 +2174,7 @@
     });
     Object.keys(data).forEach(k => delete data[k]);
     document.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+    data.voz = null;
     document.querySelectorAll('input, textarea').forEach(el => el.value = '');
     playerPlaying = false; playerSeconds = 0; playerProgress = 0;
     clearInterval(playerInterval);
