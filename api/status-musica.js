@@ -10,23 +10,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(`https://api.kie.ai/api/suno/v1/music/${taskId}`, {
+    const response = await fetch(`https://api.kie.ai/api/v1/generate/${taskId}`, {
       headers: {
         'Authorization': `Bearer ${process.env.KIE_API_KEY}`
       }
     });
 
     const data = await response.json();
+    console.log('Status KIE.ai:', JSON.stringify(data));
 
-    if (!response.ok) {
+    if (!response.ok || data.code !== 200) {
       return res.status(500).json({ pronta: false, error: data });
     }
 
-    const status = data.data?.status || data.status;
-    const audioUrl = data.data?.clips?.[0]?.audio_url || data.data?.audioUrl || null;
-
-    // Status possíveis: pending, processing, completed, failed
-    const pronta = status === 'completed' && audioUrl;
+    const status = data.data?.status;
+    // Pega o audioUrl do primeiro item do sunoData
+    const audioUrl = data.data?.response?.sunoData?.[0]?.audioUrl || null;
+    const pronta = status === 'SUCCESS' && audioUrl;
 
     return res.status(200).json({
       pronta: !!pronta,
@@ -36,6 +36,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Erro ao verificar status:', error);
-    return res.status(500).json({ pronta: false, error: 'Erro interno' });
+    return res.status(500).json({ pronta: false, error: error.message });
   }
 }
