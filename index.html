@@ -1471,6 +1471,12 @@
       <p class="edit-success" id="sucess-detalhe">✓ Detalhe salvo! Gerando nova prévia...</p>
     </div>
 
+    <div class="field" style="margin-bottom:16px;">
+      <label style="display:block;font-size:13px;font-weight:500;color:#8a6878;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Seu WhatsApp</label>
+      <input type="tel" id="telefoneCliente" placeholder="(11) 99999-9999" style="width:100%;padding:13px 15px;border:1.5px solid #e8d4db;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#3d2535;background:#fff;outline:none;">
+      <p style="font-size:11px;color:#8a6878;margin-top:5px;">📱 Para receber confirmação do pagamento</p>
+    </div>
+
     <div class="price-block">
       <div class="price-tag">R$ 29,90 <span>música completa</span></div>
       <p>Pagamento único via Pix — sem mensalidade</p>
@@ -1910,7 +1916,14 @@
   let checkInterval = null;
 
   async function iniciarPagamento() {
-    const email = 'cliente@musicaia.com'; // email não necessário, download direto no site
+    const telefone = document.getElementById('telefoneCliente').value.trim();
+    if (!telefone || telefone.length < 10) {
+      document.getElementById('telefoneCliente').style.borderColor = '#c0395a';
+      document.getElementById('telefoneCliente').focus();
+      return;
+    }
+    document.getElementById('telefoneCliente').style.borderColor = '#e8d4db';
+    const email = 'cliente@estudiomarcelegi anni.com.br';
 
     const btn = document.querySelector('.btn-pagar');
     btn.disabled = true;
@@ -1920,7 +1933,7 @@
       const res = await fetch('/api/criar-cobranca', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: data.nome || 'Cliente', email })
+        body: JSON.stringify({ nome: data.nome || 'Cliente', email, telefone })
       });
       const json = await res.json();
 
