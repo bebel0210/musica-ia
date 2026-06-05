@@ -3,22 +3,24 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { genero, ocasiao, nome, relacionamento, briefing, tom } = req.body;
+  const { genero, ocasiao, nome, relacionamento, briefing, tom, voz } = req.body;
 
   if (!genero || !nome || !briefing) {
     return res.status(400).json({ error: 'Dados incompletos' });
   }
 
   // Mapa de estilos e instrumentos
+  const vozEscolhida = voz || 'male voice';
+
   const estiloMap = {
-    sertanejo: 'Sertanejo Melódico, violão, guitarra, BPM 80, male voice',
-    pagode:    'Pagode, cavaquinho, pandeiro, BPM 85, male voice',
-    funk:      'Funk brasileiro, batida eletrônica, BPM 130, male voice',
-    gospel:    'Gospel, piano, coral, BPM 75, female voice',
-    pop:       'Pop brasileiro, sintetizador, bateria leve, BPM 95, female voice',
-    rock:      'Rock brasileiro, guitarra elétrica, bateria, BPM 100, male voice',
-    forro:     'Forró, acordeão, triângulo, BPM 90, male voice',
-    mpb:       'MPB, violão clássico, BPM 70, female voice'
+    sertanejo: `Sertanejo Melódico, violão, guitarra, BPM 80, ${vozEscolhida}`,
+    pagode:    `Pagode, cavaquinho, pandeiro, BPM 85, ${vozEscolhida}`,
+    funk:      `Funk brasileiro, batida eletrônica, BPM 130, ${vozEscolhida}`,
+    gospel:    `Gospel, piano, coral, BPM 75, ${vozEscolhida}`,
+    pop:       `Pop brasileiro, sintetizador, bateria leve, BPM 95, ${vozEscolhida}`,
+    rock:      `Rock brasileiro, guitarra elétrica, bateria, BPM 100, ${vozEscolhida}`,
+    forro:     `Forró, acordeão, triângulo, BPM 90, ${vozEscolhida}`,
+    mpb:       `MPB, violão clássico, BPM 70, ${vozEscolhida}`
   };
 
   // Mapa de temas emocionais por vínculo
