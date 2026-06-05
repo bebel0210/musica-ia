@@ -1,6 +1,42 @@
+// Rate limiting simples usando Upstash Redis
+async function checkRateLimit(ip) {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const key = `ratelimit:gerar:${ip}`;
+
+  // Incrementa contador e define expiração de 1 hora
+  const incrRes = await fetch(`${url}/incr/${key}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const incrData = await incrRes.json();
+  const count = incrData.result;
+
+  // Se é a primeira chamada, define expiração de 3600s
+  if (count === 1) {
+    await fetch(`${url}/expire/${key}/259200`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  return count;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Rate limit: máximo 3 gerações por IP por hora
+  const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress || 'unknown';
+  try {
+    const count = await checkRateLimit(ip);
+    if (count > 3) {
+      console.warn(`Rate limit atingido para IP: ${ip} (${count} tentativas)`);
+      return res.status(429).json({ error: 'Limite de gerações atingido. Tente novamente em 1 hora.' });
+    }
+  } catch (e) {
+    console.error('Erro no rate limit:', e);
+    // Se Redis falhar, deixa passar para não bloquear clientes legítimos
   }
 
   const { genero, ocasiao, nome, relacionamento, briefing, tom, voz } = req.body;
@@ -9,7 +45,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Dados incompletos' });
   }
 
-  // Mapa de estilos e instrumentos
   const vozEscolhida = voz || 'male voice';
 
   const estiloMap = {
@@ -23,7 +58,6 @@ export default async function handler(req, res) {
     mpb:       `MPB, violão clássico, BPM 70, ${vozEscolhida}`
   };
 
-  // Mapa de temas emocionais por vínculo
   const temaMap = {
     aniversario: 'celebração, gratidão, amor que cresce com o tempo',
     declaracao:  'paixão, descoberta, coração acelerado, novo começo',
@@ -40,16 +74,14 @@ export default async function handler(req, res) {
     descontraido: 'warm, lighthearted, friendly'
   };
 
-  const estilo = estiloMap[genero] || `${genero}, male voice`;
+  const estilo = estiloMap[genero] || `${genero}, ${vozEscolhida}`;
   const tema = temaMap[ocasiao] || 'amor e emoção';
   const clima = tomMap[tom] || 'emotional, heartfelt';
   const vinculo = relacionamento ? `, ${relacionamento}` : '';
 
-  // Prompt otimizado seguindo as regras técnicas do Suno/KIE.ai
   const prompt = `[style: ${estilo}, ${clima}, professional production] [intro: mencione ${nome} nos primeiros segundos] [refrão: ${nome} aparece 3 vezes] Theme: ${tema}. ${briefing.slice(0, 100)}. ${nome}${vinculo}, essa música nasceu pra você.`.slice(0, 450);
 
-  console.log('Prompt gerado:', prompt);
-  console.log('Tamanho:', prompt.length, 'chars');
+  console.log('IP:', ip, '| Prompt:', prompt);
 
   const siteUrl = process.env.SITE_URL || 'https://musica-ia-tau.vercel.app';
 
