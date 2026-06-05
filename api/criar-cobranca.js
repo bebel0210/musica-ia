@@ -4,41 +4,38 @@ export default async function handler(req, res) {
   }
 
   const { nome } = req.body;
+  const produtoId = process.env.ABACATE_PRODUCT_ID;
+
+  if (!produtoId) {
+    return res.status(500).json({ error: 'ABACATE_PRODUCT_ID não configurado' });
+  }
 
   try {
-    const response = await fetch('https://api.abacatepay.com/v1/billing/create', {
+    const response = await fetch('https://api.abacatepay.com/v2/checkouts/create', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.ABACATE_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        frequency: 'ONE_TIME',
+        items: [{ id: produtoId, quantity: 1 }],
         methods: ['PIX'],
-        products: [
-          {
-            externalId: 'musica-personalizada-ia',
-            name: 'Música Personalizada com IA',
-            description: `Música personalizada para ${nome || 'você'} — Estúdio Marcele Gianni`,
-            quantity: 1,
-            price: 2990
-          }
-        ],
-        returnUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`,
-        completionUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`
+        externalId: `musica-${nome || 'cliente'}-${Date.now()}`,
+        completionUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`,
+        returnUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}`
       })
     });
 
     const data = await response.json();
-    console.log('AbacatePay response:', JSON.stringify(data));
+    console.log('AbacatePay v2 response:', JSON.stringify(data));
 
-    if (!response.ok || !data.success) {
+    if (!response.ok || !data.data?.url) {
       return res.status(500).json({ error: 'Erro ao criar cobrança', details: data });
     }
 
     return res.status(200).json({
-      pixUrl: data.data?.url,
-      billingId: data.data?.id
+      pixUrl: data.data.url,
+      billingId: data.data.id
     });
 
   } catch (error) {
