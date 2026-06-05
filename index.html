@@ -1091,6 +1091,23 @@
   .review-text { font-size: 13px; color: var(--text); line-height: 1.55; }
   .review-genre-tag { display: inline-block; margin-top: 8px; font-size: 11px; background: var(--rose-light); color: var(--rose); padding: 3px 9px; border-radius: 100px; }
 </style>
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '4538584363133110');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=4538584363133110&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
 </head>
 <body>
 
@@ -1853,6 +1870,7 @@
 
     sessionStorage.setItem('previaGerada', '1');
     document.getElementById('loadingNome').textContent = data.nome || 'você';
+    if (typeof fbq !== 'undefined') fbq('track', 'Lead');
     document.getElementById('nomePreview').textContent = data.nome || 'você';
     goToStep(6);
 
@@ -2051,6 +2069,7 @@
   let checkInterval = null;
 
   async function iniciarPagamento() {
+    if (typeof fbq !== 'undefined') fbq('track', 'InitiateCheckout', { value: 29.90, currency: 'BRL' });
 
 
     const btn = document.querySelector('.btn-pagar');
@@ -2233,6 +2252,7 @@
   function mostrarPrevia(audioUrl) {
     document.getElementById('loadingMusica').style.display = 'none';
     document.getElementById('previaMusica').style.display = 'block';
+    if (typeof fbq !== 'undefined') fbq('track', 'ViewContent', { content_name: 'Prévia da música' });
 
     // Conecta o player real ao áudio
     let audio = document.getElementById('audioReal');
@@ -2304,6 +2324,9 @@
   // Na tela de download, conecta o player ao áudio completo (após pagamento)
   const _origGoToStep7 = window.goToStep;
   window.goToStep = function(n) {
+    if (n === 7) {
+      if (typeof fbq !== 'undefined') fbq('track', 'Purchase', { value: 29.90, currency: 'BRL' });
+    }
     if (n === 7 && audioUrlCompleto) {
       // Player da tela de download usa o áudio completo sem limite
       setTimeout(() => {
