@@ -2134,6 +2134,30 @@
     if (status) { status.textContent = msg; status.style.color = '#c0395a'; }
     const icon = document.querySelector('.loading-music-icon');
     if (icon) icon.textContent = '😕';
+
+    // Mostrar botão de tentar novamente
+    const existing = document.getElementById('btnTentarNovamente');
+    if (!existing) {
+      const btn = document.createElement('button');
+      btn.id = 'btnTentarNovamente';
+      btn.textContent = '🔄 Tentar novamente';
+      btn.style.cssText = 'margin-top:16px;padding:12px 24px;background:var(--rose);color:#fff;border:none;border-radius:12px;font-family:DM Sans,sans-serif;font-size:15px;font-weight:500;cursor:pointer;display:block;margin-left:auto;margin-right:auto;';
+      btn.onclick = async () => {
+        btn.remove();
+        const ic = document.querySelector('.loading-music-icon');
+        if (ic) ic.textContent = '🎵';
+        atualizarLoading(5, 'Iniciando geração...');
+        for (let i = 1; i <= 4; i++) {
+          const el = document.getElementById('lstep' + i);
+          const ic2 = document.getElementById('licon' + i);
+          if (el) el.className = i === 1 ? 'loading-step active' : 'loading-step';
+          if (ic2) ic2.textContent = i;
+        }
+        await gerarMusica();
+      };
+      const loading = document.getElementById('loadingMusica');
+      if (loading) loading.appendChild(btn);
+    }
   }
 
   // Na tela de download, conecta o player ao áudio completo (após pagamento)
