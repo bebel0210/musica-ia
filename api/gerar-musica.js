@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         prompt,
         customMode: false,
         instrumental: false,
-        model: 'V4_5',
+        model: 'V5',
         title: `Música para ${nome}`,
         callBackUrl: `${siteUrl}/api/webhook-kie`
       })
