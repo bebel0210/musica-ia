@@ -4,15 +4,22 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { event, billing } = req.body;
-    console.log('Webhook recebido:', event, billing?.id);
+    const body = req.body;
+    const event = body.event;
 
-    if (event === 'BILLING_PAID') {
-      const billingId = billing.id;
+    console.log('Webhook recebido:', event, JSON.stringify(body));
+
+    // AbacatePay usa "checkout.completed" como evento de pagamento confirmado
+    if (event === 'checkout.completed' || event === 'BILLING_PAID') {
+      const billingId = body.data?.checkout?.id || body.billing?.id;
+
+      if (!billingId) {
+        console.error('billingId não encontrado no payload:', body);
+        return res.status(400).json({ error: 'billingId não encontrado' });
+      }
 
       // Salva no Redis que esse billingId foi pago
-      await redisSet(`billing:${billingId}`, 'paid', 86400); // expira em 24h
-
+      await redisSet(`billing:${billingId}`, 'paid', 86400);
       console.log(`✅ Pagamento confirmado e salvo no Redis: ${billingId}`);
     }
 
