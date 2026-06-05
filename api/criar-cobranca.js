@@ -3,11 +3,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { nome, email } = req.body;
+  const { nome, email, telefone } = req.body;
 
-  if (!nome || !email) {
-    return res.status(400).json({ error: 'Nome e email são obrigatórios' });
+  if (!nome) {
+    return res.status(400).json({ error: 'Nome é obrigatório' });
   }
+
+  // Formata telefone — remove tudo que não for número
+  const telefoneLimpo = (telefone || '11999999999').replace(/\D/g, '');
 
   try {
     const response = await fetch('https://api.abacatepay.com/v1/billing/create', {
@@ -25,32 +28,34 @@ export default async function handler(req, res) {
             name: 'Música Personalizada com IA',
             description: `Música personalizada para ${nome} — Estúdio Marcele Gianni`,
             quantity: 1,
-            price: 2990 // R$29,90 em centavos
+            price: 2990
           }
         ],
         customer: {
           name: nome,
-          email: email
+          email: email || 'cliente@estudiomarcelegi anni.com.br',
+          cellphone: telefoneLimpo,
+          taxId: { type: 'CPF', number: '00000000000' }
         },
-        returnUrl: `${process.env.SITE_URL || 'https://musica-ia.vercel.app'}?pago=true`,
-        completionUrl: `${process.env.SITE_URL || 'https://musica-ia.vercel.app'}?pago=true`
+        returnUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`,
+        completionUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`
       })
     });
 
     const data = await response.json();
+    console.log('AbacatePay response:', JSON.stringify(data));
 
-    if (!response.ok) {
-      console.error('AbacatePay error:', data);
+    if (!response.ok || !data.success) {
       return res.status(500).json({ error: 'Erro ao criar cobrança', details: data });
     }
 
     return res.status(200).json({
-      pixUrl: data.url,
-      billingId: data.id
+      pixUrl: data.data?.url,
+      billingId: data.data?.id
     });
 
   } catch (error) {
     console.error('Erro interno:', error);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+    return res.status(500).json({ error: 'Erro interno', message: error.message });
   }
 }
