@@ -1457,12 +1457,6 @@
       <p class="edit-success" id="sucess-detalhe">✓ Detalhe salvo! Gerando nova prévia...</p>
     </div>
 
-    <div class="field" style="margin-bottom:16px;">
-      <label style="display:block;font-size:13px;font-weight:500;color:#8a6878;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Seu email para receber o comprovante</label>
-      <input type="email" id="emailCliente" placeholder="seuemail@gmail.com" style="width:100%;padding:13px 15px;border:1.5px solid #e8d4db;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:15px;color:#3d2535;background:#fff;outline:none;">
-      <p style="font-size:11px;color:#8a6878;margin-top:5px;">🔒 Usado apenas para entregar sua música</p>
-    </div>
-
     <div class="price-block">
       <div class="price-tag">R$ 29,90 <span>música completa</span></div>
       <p>Pagamento único via Pix — sem mensalidade</p>
@@ -1878,13 +1872,7 @@
   let checkInterval = null;
 
   async function iniciarPagamento() {
-    const email = document.getElementById('emailCliente').value.trim();
-    if (!email || !email.includes('@')) {
-      document.getElementById('emailCliente').style.borderColor = '#c0395a';
-      document.getElementById('emailCliente').focus();
-      return;
-    }
-    document.getElementById('emailCliente').style.borderColor = '#e8d4db';
+    const email = 'cliente@musicaia.com'; // email não necessário, download direto no site
 
     const btn = document.querySelector('.btn-pagar');
     btn.disabled = true;
