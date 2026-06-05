@@ -3,14 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { nome, email, telefone } = req.body;
-
-  if (!nome) {
-    return res.status(400).json({ error: 'Nome é obrigatório' });
-  }
-
-  // Formata telefone — remove tudo que não for número
-  const telefoneLimpo = (telefone || '11999999999').replace(/\D/g, '');
+  const { nome } = req.body;
 
   try {
     const response = await fetch('https://api.abacatepay.com/v1/billing/create', {
@@ -26,17 +19,11 @@ export default async function handler(req, res) {
           {
             externalId: 'musica-personalizada-ia',
             name: 'Música Personalizada com IA',
-            description: `Música personalizada para ${nome} — Estúdio Marcele Gianni`,
+            description: `Música personalizada para ${nome || 'você'} — Estúdio Marcele Gianni`,
             quantity: 1,
             price: 2990
           }
         ],
-        customer: {
-          name: nome,
-          email: email || 'cliente@estudiomarcelegi anni.com.br',
-          cellphone: telefoneLimpo,
-          taxId: { type: 'CPF', number: '00000000000' }
-        },
         returnUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`,
         completionUrl: `${process.env.SITE_URL || 'https://musica-ia-tau.vercel.app'}?pago=true`
       })
