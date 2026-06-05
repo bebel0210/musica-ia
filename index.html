@@ -1664,7 +1664,16 @@
 
   bindChips('genreOptions', 'genero', 'err1', 'next1');
   bindChips('ocasiaoOptions', 'ocasiao', 'err2', 'next2');
-  bindChips('tomOptions', 'tom', 'err5', 'next5');
+  // Tom: só seleciona o chip, navegação feita pelo listener do next5 abaixo
+  const tomGrid = document.getElementById('tomOptions');
+  tomGrid.querySelectorAll('.opt-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tomGrid.querySelectorAll('.opt-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      data.tom = btn.dataset.val;
+      document.getElementById('err5').style.display = 'none';
+    });
+  });
 
   document.getElementById('next3').addEventListener('click', () => {
     const nome = document.getElementById('nomePersona').value.trim();
