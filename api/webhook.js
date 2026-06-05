@@ -5,17 +5,15 @@ export default async function handler(req, res) {
 
   try {
     const { event, billing } = req.body;
-
     console.log('Webhook recebido:', event, billing?.id);
 
     if (event === 'BILLING_PAID') {
       const billingId = billing.id;
-      const customerName = billing.customer?.name || 'Cliente';
-      const customerEmail = billing.customer?.email;
 
-      console.log(`✅ Pagamento confirmado! ID: ${billingId} — ${customerName} (${customerEmail})`);
-      // O desbloqueio do download acontece no frontend
-      // via verificar-pagamento.js que checa o status no AbacatePay
+      // Salva no Redis que esse billingId foi pago
+      await redisSet(`billing:${billingId}`, 'paid', 86400); // expira em 24h
+
+      console.log(`✅ Pagamento confirmado e salvo no Redis: ${billingId}`);
     }
 
     return res.status(200).json({ ok: true });
@@ -24,4 +22,15 @@ export default async function handler(req, res) {
     console.error('Erro no webhook:', error);
     return res.status(500).json({ error: 'Erro interno' });
   }
+}
+
+async function redisSet(key, value, exSeconds) {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  const response = await fetch(`${url}/set/${key}/${value}/ex/${exSeconds}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  return response.json();
 }
