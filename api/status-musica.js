@@ -10,44 +10,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(`https://api.kie.ai/api/v1/generate/${taskId}`, {
+    // Endpoint correto conforme documentação KIE.ai
+    const response = await fetch(`https://api.kie.ai/api/v1/generate/record-info?taskId=${taskId}`, {
       headers: {
         'Authorization': `Bearer ${process.env.KIE_API_KEY}`
       }
     });
 
     const data = await response.json();
-    console.log('Status KIE.ai raw:', JSON.stringify(data));
+    console.log('Status KIE.ai:', JSON.stringify(data));
 
     if (!response.ok || data.code !== 200) {
       return res.status(500).json({ pronta: false, error: data });
     }
 
     const status = data.data?.status;
-
-    // Tenta todas as estruturas possíveis de resposta da KIE.ai
-    let audioUrl = null;
-
-    // Estrutura 1: sunoData array
-    audioUrl = data.data?.response?.sunoData?.[0]?.audioUrl;
-
-    // Estrutura 2: array direto de URLs
-    if (!audioUrl) {
-      const urls = data.data?.response;
-      if (Array.isArray(urls) && urls.length > 0) {
-        audioUrl = urls[0];
-      }
-    }
-
-    // Estrutura 3: audioUrl direto
-    if (!audioUrl) {
-      audioUrl = data.data?.audioUrl || data.data?.audio_url;
-    }
-
-    // Estrutura 4: clips
-    if (!audioUrl) {
-      audioUrl = data.data?.clips?.[0]?.audio_url;
-    }
+    // audioUrl dentro de sunoData
+    const audioUrl = data.data?.response?.sunoData?.[0]?.audioUrl || null;
 
     console.log('Status:', status, '| audioUrl:', audioUrl);
 
