@@ -9,27 +9,45 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Dados incompletos' });
   }
 
+  // Mapa de estilos e instrumentos
+  const estiloMap = {
+    sertanejo: 'Sertanejo Melódico, violão, guitarra, BPM 80, male voice',
+    pagode:    'Pagode, cavaquinho, pandeiro, BPM 85, male voice',
+    funk:      'Funk brasileiro, batida eletrônica, BPM 130, male voice',
+    gospel:    'Gospel, piano, coral, BPM 75, female voice',
+    pop:       'Pop brasileiro, sintetizador, bateria leve, BPM 95, female voice',
+    rock:      'Rock brasileiro, guitarra elétrica, bateria, BPM 100, male voice',
+    forro:     'Forró, acordeão, triângulo, BPM 90, male voice',
+    mpb:       'MPB, violão clássico, BPM 70, female voice'
+  };
+
+  // Mapa de temas emocionais por vínculo
+  const temaMap = {
+    aniversario: 'celebração, gratidão, amor que cresce com o tempo',
+    declaracao:  'paixão, descoberta, coração acelerado, novo começo',
+    homenagem:   'gratidão, origem, força, amor incondicional',
+    casamento:   'cumplicidade, escolha, amor eterno, parceria',
+    amizade:     'lealdade, memórias, irmandade, estar junto nas tormentas',
+    outro:       'amor, emoção, gratidão, momento único'
+  };
+
   const tomMap = {
-    romantico: 'romântico e emotivo',
-    animado: 'animado e festivo',
-    emocional: 'emocionante e tocante',
-    descontraido: 'descontraído e alegre'
+    romantico:    'emotional, romantic, heartfelt',
+    animado:      'uplifting, joyful, energetic',
+    emocional:    'deeply emotional, tearful, touching',
+    descontraido: 'warm, lighthearted, friendly'
   };
 
-  const ocasiaoMap = {
-    aniversario: 'aniversário',
-    declaracao: 'declaração de amor',
-    homenagem: 'homenagem especial',
-    casamento: 'casamento',
-    amizade: 'homenagem a amigo',
-    outro: 'ocasião especial'
-  };
+  const estilo = estiloMap[genero] || `${genero}, male voice`;
+  const tema = temaMap[ocasiao] || 'amor e emoção';
+  const clima = tomMap[tom] || 'emotional, heartfelt';
+  const vinculo = relacionamento ? `, ${relacionamento}` : '';
 
-  // Prompt curto focado na letra — sem instruções técnicas
-  const prompt = `Uma música de ${ocasiaoMap[ocasiao] || ocasiao} para ${nome}${relacionamento ? `, ${relacionamento}` : ''}. ${briefing}. Tom ${tomMap[tom] || tom}. Mencione o nome ${nome} no refrão.`;
+  // Prompt otimizado seguindo as regras técnicas do Suno/KIE.ai
+  const prompt = `[style: ${estilo}, ${clima}, professional production] [${nome} no refrão] Theme: ${tema}. ${briefing.slice(0, 120)}. ${nome}${vinculo}, essa música é pra você.`.slice(0, 450);
 
-  // Style separado — só o gênero e características musicais
-  const style = `${genero} brasileiro, voz masculina emotiva, violão e guitarra, refrão marcante, duração longa`;
+  console.log('Prompt gerado:', prompt);
+  console.log('Tamanho:', prompt.length, 'chars');
 
   const siteUrl = process.env.SITE_URL || 'https://musica-ia-tau.vercel.app';
 
@@ -42,10 +60,9 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         prompt,
-        customMode: true,
+        customMode: false,
         instrumental: false,
         model: 'V4_5',
-        style,
         title: `Música para ${nome}`,
         callBackUrl: `${siteUrl}/api/webhook-kie`
       })
@@ -55,12 +72,10 @@ export default async function handler(req, res) {
     console.log('KIE.ai response:', JSON.stringify(data));
 
     if (!response.ok || data.code !== 200) {
-      console.error('KIE.ai error:', data);
       return res.status(500).json({ error: 'Erro ao gerar música', details: data });
     }
 
     const taskId = data.data?.taskId;
-
     if (!taskId) {
       return res.status(500).json({ error: 'taskId não retornado', raw: data });
     }
