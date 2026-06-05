@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   const vinculo = relacionamento ? `, ${relacionamento}` : '';
 
   // Prompt otimizado seguindo as regras técnicas do Suno/KIE.ai
-  const prompt = `[style: ${estilo}, ${clima}, professional production] [${nome} no refrão] Theme: ${tema}. ${briefing.slice(0, 120)}. ${nome}${vinculo}, essa música é pra você.`.slice(0, 450);
+  const prompt = `[style: ${estilo}, ${clima}, professional production] [intro: mencione ${nome} nos primeiros segundos] [refrão: ${nome} aparece 3 vezes] Theme: ${tema}. ${briefing.slice(0, 100)}. ${nome}${vinculo}, essa música nasceu pra você.`.slice(0, 450);
 
   console.log('Prompt gerado:', prompt);
   console.log('Tamanho:', prompt.length, 'chars');
