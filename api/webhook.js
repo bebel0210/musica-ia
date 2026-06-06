@@ -4,13 +4,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Valida a secret do webhook
-    const secret = req.headers['x-webhook-secret'] || req.query.secret;
-    if (process.env.WEBHOOK_SECRET && secret !== process.env.WEBHOOK_SECRET) {
-      console.warn('Webhook com secret inválida rejeitado');
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     const body = req.body;
     const event = body.event;
 
@@ -24,8 +17,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'billingId não encontrado' });
       }
 
+      // Salva no Redis
       await redisSet(`billing:${billingId}`, 'paid', 86400);
       console.log(`✅ Pagamento confirmado: ${billingId}`);
+
+      // Envia evento Purchase para a API de Conversões do Facebook
+      await enviarEventoFacebook(billingId);
     }
 
     return res.status(200).json({ ok: true });
@@ -33,6 +30,43 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Erro no webhook:', error);
     return res.status(500).json({ error: 'Erro interno' });
+  }
+}
+
+async function enviarEventoFacebook(billingId) {
+  const accessToken = process.env.FB_ACCESS_TOKEN;
+  const pixelId = '4538584363133110';
+
+  if (!accessToken) {
+    console.warn('FB_ACCESS_TOKEN não configurado');
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${accessToken}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: [{
+            event_name: 'Purchase',
+            event_time: Math.floor(Date.now() / 1000),
+            action_source: 'website',
+            custom_data: {
+              currency: 'BRL',
+              value: 29.90,
+              order_id: billingId
+            }
+          }]
+        })
+      }
+    );
+
+    const data = await response.json();
+    console.log('Facebook API de Conversões:', JSON.stringify(data));
+  } catch (err) {
+    console.error('Erro ao enviar evento para Facebook:', err);
   }
 }
 
